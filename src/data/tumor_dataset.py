@@ -1,56 +1,31 @@
-import os
-import torch
-import numpy as np
+import torch 
 import nibabel as nib
-from torch.utils.data import Dataset
+import numpy as np
+import os 
+from torch.utils.data import Dataset , DataLoader
 
 class BraTS2DDataset(Dataset):
-    """
-    Dataset loader for BraTS 2020 3D MRI volumes, sliced into 2D images.
-    Returns:
-        image: Tensor of shape [1, H, W] (FLAIR modality normalized)
-        mask:  Tensor of shape [1, H, W] (Binary mask: 1 for tumor, 0 for background)
-    """
-    def __init__(self, slice_indices: list, transform=None):
-        """
-        Args:
-            slice_indices: List of tuples (patient_dir_path, slice_idx)
-            transform: Optional torchvision transforms
-        """
-        self.slice_indices = slice_indices
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.slice_indices)
-
-    def __getitem__(self, idx):
-        patient_path, slice_idx = self.slice_indices[idx]
+    def __init__(self , slice_indexes) :
+        self.slice_indexes = slice_indexes 
         
-        # Paths to MRI volumes (using FLAIR modality for baseline)
+    def __len__(self):
+        return len(self.slice_indexes)
+    
+    def __getitem__(self , idx) : 
+        patient_path , slice_idx = self.slice_indexes[idx] 
         folder_name = os.path.basename(patient_path)
-        flair_path = os.path.join(patient_path, f"{folder_name}_flair.nii.gz")
-        seg_path = os.path.join(patient_path, f"{folder_name}_seg.nii.gz")
-
-        # Load 3D volumes using nibabel
-        flair_vol = nib.load(flair_path).get_fdata()
-        seg_vol = nib.load(seg_path).get_fdata()
-
-        # Extract 2D Slice
-        image_slice = flair_vol[:, :, slice_idx]
-        mask_slice = seg_vol[:, :, slice_idx]
-
-        # Convert multi-class segmentation mask to binary (tumor vs background)
-        mask_slice = np.where(mask_slice > 0, 1.0, 0.0)
-
-        # Intensity Normalization (Min-Max scaling to [0, 1])
-        if np.max(image_slice) > 0:
-            image_slice = (image_slice - np.min(image_slice)) / (np.max(image_slice) - np.min(image_slice))
-
-        # Convert to PyTorch Tensors [C, H, W]
-        image_tensor = torch.from_numpy(image_slice).float().unsqueeze(0)
-        mask_tensor = torch.from_numpy(mask_slice).float().unsqueeze(0)
-
-        if self.transform:
-            image_tensor = self.transform(image_tensor)
-
-        return image_tensor, mask_tensor
+        seg_path = os.path.join(patient_path, f"{folder_name}_seg.nii")
+        flair_path = os.path.join(patient_path, f"{folder_name}_flair.nii")
+        
+        seg_img = nib.load(seg_path).get_fdata()[: , : , slice_idx]
+        seg_binary = np.where(seg_img > 0 , 1.0 , 0.0) 
+        seg_tensor = np.expand_dims(seg_binary , axis = 0 ) #shape  = 1 , 240 , 240 
+        
+        flair_img = nib.load(flair_path).get_fdata()[: , : , slice_idx]
+        if flair_img.max() > 0 : 
+            flair_img = (flair_img - flair_img.min() ) / (flair_img.max() - flair_img.min())
+        flair_tensor = np.expand_dims(flair_img , axis = 0 ) # shape = 1 , 240 , 240
+        
+        return torch.from_numpy(flair_tensor).float(), torch.from_numpy(seg_tensor).float()
+        
+        

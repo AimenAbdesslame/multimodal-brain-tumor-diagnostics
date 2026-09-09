@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>☕ Coffee & Pages Dashboard</title>
+  <meta name="description" content="A personalized reading and behavioral tracking app with AI-powered weekly reflections and session analytics." />
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       DESIGN TOKENS & RESET
+    ============================================================ */
+    :root {
+      --bg-main:        #1a1614;
+      --bg-surface:     #261f1c;
+      --bg-card:        #2e2622;
+      --bg-card-hover:  #342b27;
+      --accent-caramel: #d4a373;
+      --accent-cream:   #e9c46a;
+      --text-cream:     #f4ebd9;
+      --text-muted:     #a89f91;
+      --border:         #3a302a;
+      --border-light:   #4a3c34;
+      --danger:         #c0674a;
+      --success:        #7aad7a;
+      --radius-sm:      6px;
+      --radius-md:      10px;
+      --radius-lg:      16px;
+      --shadow-sm:      0 2px 8px rgba(0,0,0,0.4);
+      --shadow-md:      0 6px 24px rgba(0,0,0,0.5);
+      --shadow-lg:      0 12px 48px rgba(0,0,0,0.65);
+      --transition:     0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 15px; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-main);
+      color: var(--text-cream);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ============================================================
+       SCROLLBAR — COZY
+    ============================================================ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-surface); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-caramel); }
+
+    /* ============================================================
+       TYPOGRAPHY UTILITIES
+    ============================================================ */
+    .text-accent   { color: var(--accent-caramel); }
+    .text-muted    { color: var(--text-muted); }
+    .text-cream    { color: var(--text-cream); }
+    .text-sm       { font-size: 0.8rem; }
+    .text-xs       { font-size: 0.72rem; }
+    .fw-500        { font-weight: 500; }
+    .fw-600        { font-weight: 600; }
+
+    /* ============================================================
+       LAYOUT UTILITIES
+    ============================================================ */
+    .flex          { display: flex; }
+    .flex-col      { flex-direction: column; }
+    .items-center  { align-items: center; }
+    .items-start   { align-items: flex-start; }
+    .justify-between { justify-content: space-between; }
+    .gap-4         { gap: 4px; }
+    .gap-8         { gap: 8px; }
+    .gap-12        { gap: 12px; }
+    .gap-16        { gap: 16px; }
+    .gap-24        { gap: 24px; }
+    .w-full        { width: 100%; }
+
+    /* ============================================================
+       APP WRAPPER
+    ============================================================ */
+    #app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    /* ============================================================
+       HEADER
+    ============================================================ */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(26, 22, 20, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-brand h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-cream);
+      letter-spacing: -0.01em;
+    }
+
+    .header-brand .subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    /* ============================================================
+       BUTTONS
+    ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--accent-caramel);
+      color: #1a1614;
+    }
+    .btn-primary:hover { background: #ddb07e; box-shadow: 0 0 0 3px rgba(212,163,115,0.2); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg-card); color: var(--text-cream); border-color: var(--border-light); }
+
+    .btn-surface {
+      background: var(--bg-card);
+      color: var(--text-cream);
+      border: 1px solid var(--border);
+    }
+    .btn-surface:hover { background: var(--bg-card-hover); border-color: var(--border-light); }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid transparent;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+    }
+    .btn-danger:hover { background: rgba(192,103,74,0.12); border-color: var(--danger); }
+
+    .btn-ai {
+      background: linear-gradient(135deg, #261f1c 0%, #3a2a22 100%);
+      color: var(--accent-caramel);
+      border: 1px solid var(--accent-caramel);
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      box-shadow: 0 0 12px rgba(212,163,115,0.1);
+    }
+    .btn-ai:hover {
+      background: linear-gradient(135deg, #3a2a22 0%, #4a3828 100%);
+      box-shadow: 0 0 20px rgba(212,163,115,0.25);
+    }
+
+    .btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+    .btn-icon {
+      width: 32px; height: 32px;
+      padding: 0;
+      border-radius: var(--radius-sm);
+      justify-content: center;
+    }
+
+    /* ============================================================
+       CARD
+    ============================================================ */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-cream);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title i { color: var(--accent-caramel); }
+
+    /* ============================================================
+       DASHBOARD GRID
+    ============================================================ */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       BADGE / STATUS
+    ============================================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-reading  { background: rgba(212,163,115,0.15); color: var(--accent-caramel); }
+    .badge-finished { background: rgba(122,173,122,0.15); color: var(--success); }
+    .badge-queued   { background: rgba(168,159,145,0.15); color: var(--text-muted); }
+
+    /* ============================================================
+       BOOK LIST
+    ============================================================ */
+    #book-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+
+    .book-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: all var(--transition);
+      gap: 10px;
+    }
+    .book-item:hover { border-color: var(--border-light); background: var(--bg-card-hover); }
+
+    .book-info { flex: 1; min-width: 0; }
+    .book-title-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-cream); font-family: inherit;
+      font-size: 0.85rem; font-weight: 500;
+      text-align: left; padding: 0;
+      transition: color var(--transition);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: block; width: 100%;
+    }
+    .book-title-btn:hover { color: var(--accent-caramel); }
+    .book-author { font-size: 0.73rem; color: var(--text-muted); margin-top: 1px; }
+
+    .book-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+    /* Status select inside book */
+    .status-select {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.72rem;
+      padding: 3px 6px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .status-select:hover, .status-select:focus { border-color: var(--accent-caramel); outline: none; }
+
+    /* ============================================================
+       FORM INPUTS
+    ============================================================ */
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-cream);
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 9px 12px;
+      transition: all var(--transition);
+      outline: none;
+    }
+    .form-control:focus { border-color: var(--accent-caramel); box-shadow: 0 0 0 3px rgba(212,163,115,0.12); }
+    .form-control::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+    select.form-control option { background: var(--bg-card); }
+
+    textarea.form-control { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+    .form-row { display: grid; gap: 10px; }
+    .form-row-2 { grid-template-columns: 1fr 1fr; }
+    .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* ============================================================
+       SESSION LOG TABLE
+    ============================================================ */
+    .log-table-wrapper {
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 14px;
+    }
+
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+
+    .log-table thead th {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.68rem;
+      padding: 8px 10px;
+      text-align: left;
+      position: sticky; top: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .log-table tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
+    .log-table tbody tr:last-child { border-bottom: none; }
+    .log-table tbody tr:hover { background: var(--bg-card); }
+    .log-table td { padding: 7px 10px; color: var(--text-cream); vertical-align: middle; }
+    .log-table td.muted { color: var(--text-muted); }
+
+    /* ============================================================
+       CHART SECTION
+    ============================================================ */
+    #chart-section {
+      margin-top: 20px;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 200px;
+      margin-top: 14px;
+    }
+
+    /* ============================================================
+       WEEKLY SECTION
+    ============================================================ */
+    #weekly-section { margin-top: 20px; }
+
+    .week-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .week-book-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-cream);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.82rem;
+      padding: 7px 12px;
+      cursor: pointer;
+      outline: none;
+      transition: all var(--transition);
+    }
+    .week-book-select:focus { border-color: var(--accent-caramel); }
+    .week-book-select option { background: var(--bg-card); }
+
+    .weeks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+
+    .week-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .week-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-caramel), var(--accent-cream));
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+    .week-card:hover { border-color: var(--border-light); }
+    .week-card:hover::before { opacity: 1; }
+
+    .week-card-title { font-size: 0.88rem; font-weight: 600; color: var(--text-cream); }
+    .week-card-date { font-size: 0.72rem; color: var(--text-muted); }
+
+    .week-card-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+
+    /* AI result inside week card */
+    .ai-result {
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent-caramel);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      display: none;
+      margin-top: 4px;
+      white-space: pre-wrap;
+    }
+    .ai-result.visible { display: block; }
+
+    .ai-thinking {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--accent-caramel); font-size: 0.75rem;
+    }
+
+    /* Pulsing dot loader */
+    .dot-loader { display: inline-flex; gap: 4px; align-items: center; }
+    .dot-loader span {
+      width: 5px; height: 5px;
+      background: var(--accent-caramel);
+      border-radius: 50%;
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+    .dot-loader span:nth-child(2) { animation-delay: 0.2s; }
+    .dot-loader span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%,80%,100% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+    /* ============================================================
+       MODAL — SHARED
+    ============================================================ */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(10,8,7,0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--transition);
+    }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(12px) scale(0.98);
+      transition: transform var(--transition);
+    }
+    .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-title { font-size: 1rem; font-weight: 700; color: var(--text-cream); }
+    .modal-subtitle { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+    .modal-close {
+      background: none; border: none;
+      color: var(--text-muted); cursor: pointer;
+      padding: 4px; border-radius: var(--radius-sm);
+      transition: color var(--transition);
+      flex-shrink: 0;
+    }
+    .modal-close:hover { color: var(--text-cream); }
+
+    .modal-body { display: flex; flex-direction: column; gap: 16px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+
+    /* Blueprint sections */
+    .blueprint-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .blueprint-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-caramel);
+      margin-bottom: 6px;
+    }
+
+    /* ============================================================
+       AI CHAT DRAWER
+    ============================================================ */
+    #chat-drawer {
+      position: fixed;
+      top: 0; right: -480px;
+      width: 440px;
+      max-width: 100vw;
+      height: 100vh;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-light);
+      z-index: 600;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.32s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+    }
+    #chat-drawer.open { right: 0; }
+
+    #chat-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10,8,7,0.5);
+      z-index: 590;
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--transition);
+      backdrop-filter: blur(4px);
+    }
+    #chat-overlay.open { opacity: 1; pointer-events: all; }
+
+    .drawer-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .drawer-title { font-size: 0.95rem; font-weight: 700; color: var(--text-cream); }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-msg {
+      max-width: 88%;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.82rem;
+      line-height: 1.65;
+      animation: fadeUp 0.2s ease;
+    }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
+
+    .chat-msg.user {
+      background: var(--accent-caramel);
+      color: #1a1614;
+      margin-left: auto;
+      border-bottom-right-radius: 2px;
+      font-weight: 500;
+    }
+    .chat-msg.assistant {
+      background: var(--bg-card);
+      color: var(--text-cream);
+      border: 1px solid var(--border);
+      margin-right: auto;
+      border-bottom-left-radius: 2px;
+      white-space: pre-wrap;
+    }
+    .chat-msg.system-msg {
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.73rem;
+      border: 1px dashed var(--border);
+      text-align: center;
+      margin: 0 auto;
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+    }
+
+    .chat-input-area {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    .chat-input-area textarea {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-cream);
+      font-family: inherit;
+      font-size: 0.83rem;
+      padding: 9px 12px;
+      resize: none;
+      outline: none;
+      min-height: 40px;
+      max-height: 120px;
+      line-height: 1.5;
+      transition: all var(--transition);
+    }
+    .chat-input-area textarea:focus { border-color: var(--accent-caramel); }
+    .chat-input-area textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+    .drawer-api-section {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-main);
+      flex-shrink: 0;
+    }
+    .drawer-api-section details summary {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .drawer-api-section details[open] summary { color: var(--accent-caramel); }
+
+    /* ============================================================
+       SECTION LABEL
+    ============================================================ */
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ============================================================
+       EMPTY STATE
+    ============================================================ */
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .empty-state i { display: block; margin: 0 auto 10px; opacity: 0.4; }
+
+    /* ============================================================
+       TOAST NOTIFICATION
+    ============================================================ */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-left: 3px solid var(--accent-caramel);
+      color: var(--text-cream);
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      box-shadow: var(--shadow-md);
+      pointer-events: all;
+      animation: toastIn 0.25s ease;
+      max-width: 280px;
+    }
+    @keyframes toastIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform:none; } }
+    .toast.error { border-left-color: var(--danger); }
+    .toast.success { border-left-color: var(--success); }
+
+    /* ============================================================
+       MISC
+    ============================================================ */
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    /* Spinning loader */
+    .spin {
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Week card add button */
+    .week-card-add {
+      background: transparent;
+      border: 1px dashed var(--border-light);
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      transition: all var(--transition);
+    }
+    .week-card-add:hover { border-color: var(--accent-caramel); color: var(--accent-caramel); }
+
+    /* Chart toggle group */
+    .toggle-group { display: flex; gap: 4px; }
+    .toggle-btn {
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.74rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      transition: all var(--transition);
+    }
+    .toggle-btn.active {
+      background: var(--accent-caramel);
+      color: #1a1614;
+      border-color: var(--accent-caramel);
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .stat-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      text-align: center;
+    }
+    .stat-chip .stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--accent-caramel);
+      line-height: 1;
+    }
+    .stat-chip .stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Glow on focus input */
+    input:focus, textarea:focus, select:focus { outline: none; }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+============================================================ -->
+<header>
+  <div class="header-brand">
+    <h1>☕ Coffee &amp; Pages Dashboard</h1>
+    <div class="subtitle">Read. Reflect. Execute.</div>
+  </div>
+  <button class="btn btn-ai" id="open-chat-btn">
+    <i data-lucide="message-circle" width="15" height="15"></i>
+    AI Discussion
+  </button>
+</header>
+
+<!-- ============================================================
+     MAIN APP
+============================================================ -->
+<div id="app">
+
+  <!-- STATS ROW -->
+  <div class="stats-row">
+    <div class="stat-chip">
+      <div class="stat-value" id="stat-books">0</div>
+      <div class="stat-label">Books Tracked</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-value" id="stat-hours">0</div>
+      <div class="stat-label">Hours Read</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-value" id="stat-pages">0</div>
+      <div class="stat-label">Pages Read</div>
+    </div>
+  </div>
+
+  <!-- TOP GRID: Reading List + Session Log -->
+  <div class="dashboard-grid">
+
+    <!-- LEFT: Reading List & Notes -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i data-lucide="book-open" width="16" height="16"></i>
+          Reading List &amp; Notes
+        </div>
+        <button class="btn btn-primary btn-sm" id="add-book-btn">
+          <i data-lucide="plus" width="13" height="13"></i>
+          Add Book
+        </button>
+      </div>
+      <div id="book-list">
+        <!-- Books rendered here -->
+      </div>
+      <div class="empty-state" id="book-empty" style="display:none">
+        <i data-lucide="book" width="28" height="28"></i>
+        No books yet. Add your first read!
+      </div>
+    </div>
+
+    <!-- RIGHT: Session Log -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i data-lucide="clock" width="16" height="16"></i>
+          Reading Session Log
+        </div>
+      </div>
+
+      <!-- Log Form -->
+      <div class="flex flex-col gap-8">
+        <div class="form-group">
+          <label class="form-label">Book</label>
+          <select class="form-control" id="log-book">
+            <option value="">— Select a book —</option>
+          </select>
+        </div>
+        <div class="form-row form-row-3">
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="log-date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hours</label>
+            <input type="number" class="form-control" id="log-hours" min="0" max="24" step="0.25" placeholder="1.5" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pages</label>
+            <input type="number" class="form-control" id="log-pages" min="0" placeholder="42" />
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="log-session-btn" style="align-self:flex-end">
+          <i data-lucide="save" width="13" height="13"></i>
+          Log Session
+        </button>
+      </div>
+
+      <!-- Log Table -->
+      <div class="log-table-wrapper">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Book</th>
+              <th>Date</th>
+              <th>Hours</th>
+              <th>Pages</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="log-table-body">
+            <!-- Rows rendered here -->
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CHART SECTION -->
+  <div class="card" id="chart-section" style="margin-top:20px">
+    <div class="card-header">
+      <div class="card-title">
+        <i data-lucide="trending-up" width="16" height="16"></i>
+        Reading Volume Analytics
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="toggle-pages" onclick="switchChartMode('pages')">Pages Read</button>
+        <button class="toggle-btn" id="toggle-hours" onclick="switchChartMode('hours')">Hours Spent</button>
+      </div>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="reading-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- WEEKLY SECTION -->
+  <div id="weekly-section" style="margin-top:20px">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i data-lucide="calendar-days" width="16" height="16"></i>
+          Weekly Behavioral Experience &amp; Reflection
+        </div>
+        <select class="week-book-select" id="weekly-book-select">
+          <option value="">— Choose a book —</option>
+        </select>
+      </div>
+
+      <div class="weeks-grid" id="weeks-grid">
+        <!-- Week cards rendered here -->
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #app -->
+
+<!-- ============================================================
+     AI CHAT DRAWER OVERLAY
+============================================================ -->
+<div id="chat-overlay" onclick="closeChatDrawer()"></div>
+
+<!-- ============================================================
+     AI CHAT DRAWER
+============================================================ -->
+<div id="chat-drawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title">✦ AI Reading Assistant</div>
+      <div class="text-sm text-muted" style="margin-top:2px">Powered by Groq · Aware of your reading context</div>
+    </div>
+    <button class="modal-close" onclick="closeChatDrawer()">
+      <i data-lucide="x" width="18" height="18"></i>
+    </button>
+  </div>
+
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg system-msg">
+      Your entire reading context is injected into every message.
+    </div>
+    <div class="chat-msg assistant">
+      ☕ Hello! I'm your AI reading companion. Ask me anything about your books, behavioral patterns, study blueprints, or weekly reflections — I have full context of your dashboard.
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <textarea id="chat-input" rows="1" placeholder="Ask about your reading journey…" onkeydown="handleChatKey(event)"></textarea>
+    <button class="btn btn-primary btn-icon" id="chat-send-btn" onclick="sendChatMessage()">
+      <i data-lucide="send" width="15" height="15"></i>
+    </button>
+  </div>
+
+  <!-- API Settings -->
+  <div class="drawer-api-section">
+    <details id="api-settings-details">
+      <summary>
+        <i data-lucide="settings" width="12" height="12"></i>
+        API Settings
+      </summary>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+        <div class="form-group">
+          <label class="form-label">Groq API Key</label>
+          <input type="password" class="form-control" id="api-key-input" placeholder="gsk_…" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model</label>
+          <select class="form-control" id="model-select">
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Recommended)</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Faster)</option>
+            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+            <option value="gemma2-9b-it">gemma2-9b-it</option>
+          </select>
+        </div>
+        <button class="btn btn-surface btn-sm" onclick="saveApiSettings()">
+          <i data-lucide="check" width="12" height="12"></i>
+          Save Settings
+        </button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: ADD / EDIT BOOK
+============================================================ -->
+<div class="modal-backdrop" id="book-modal-backdrop" onclick="handleBackdropClick(event,'book-modal-backdrop')">
+  <div class="modal" id="book-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="book-modal-title">Add New Book</div>
+        <div class="modal-subtitle">Fill in the details for your book</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('book-modal-backdrop')">
+        <i data-lucide="x" width="18" height="18"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">Title *</label>
+          <input type="text" class="form-control" id="book-title-input" placeholder="Atomic Habits" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Author *</label>
+          <input type="text" class="form-control" id="book-author-input" placeholder="James Clear" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="book-status-input">
+          <option value="queued">Queued</option>
+          <option value="reading">Currently Reading</option>
+          <option value="finished">Finished</option>
+        </select>
+      </div>
+      <input type="hidden" id="book-edit-id" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('book-modal-backdrop')">Cancel</button>
+      <button class="btn btn-primary" id="book-save-btn" onclick="saveBook()">
+        <i data-lucide="save" width="14" height="14"></i>
+        Save Book
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: BOOK BLUEPRINT / STUDY NOTES
+============================================================ -->
+<div class="modal-backdrop" id="blueprint-modal-backdrop" onclick="handleBackdropClick(event,'blueprint-modal-backdrop')">
+  <div class="modal" style="max-width:640px" id="blueprint-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="blueprint-book-title">5-Part Study Blueprint</div>
+        <div class="modal-subtitle" id="blueprint-book-author"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('blueprint-modal-backdrop')">
+        <i data-lucide="x" width="18" height="18"></i>
+      </button>
+    </div>
+    <div class="modal-body" id="blueprint-body">
+      <!-- Rendered dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('blueprint-modal-backdrop')">Close</button>
+      <button class="btn btn-primary" id="blueprint-save-btn" onclick="saveBlueprint()">
+        <i data-lucide="save" width="14" height="14"></i>
+        Save Blueprint
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: WEEKLY REFLECTION
+============================================================ -->
+<div class="modal-backdrop" id="reflection-modal-backdrop" onclick="handleBackdropClick(event,'reflection-modal-backdrop')">
+  <div class="modal" style="max-width:580px" id="reflection-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="reflection-modal-title">Weekly Reflection</div>
+        <div class="modal-subtitle" id="reflection-modal-subtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('reflection-modal-backdrop')">
+        <i data-lucide="x" width="18" height="18"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Rules Applied This Week</label>
+        <textarea class="form-control" id="refl-rules" placeholder="e.g. I followed the 2-minute rule for small tasks, kept a reading log…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Behavior &amp; Reaction Notes</label>
+        <textarea class="form-control" id="refl-behavior" placeholder="How did you react? What behaviors changed?"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Personal Assessment</label>
+        <textarea class="form-control" id="refl-assessment" placeholder="Rate and assess your week honestly…"></textarea>
+      </div>
+      <input type="hidden" id="refl-week-id" />
+      <input type="hidden" id="refl-book-id" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('reflection-modal-backdrop')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveReflection()">
+        <i data-lucide="save" width="14" height="14"></i>
+        Save Reflection
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TOAST CONTAINER
+============================================================ -->
+<div id="toast-container"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+// ============================================================
+// STATE & PERSISTENCE
+// ============================================================
+
+/** Load the entire app state from localStorage, or return defaults */
+function loadState() {
+  const raw = localStorage.getItem('coffeePages_state');
+  if (raw) {
+    try { return JSON.parse(raw); }
+    catch(e) {}
+  }
+  return {
+    books:       [],   // { id, title, author, status, blueprint:{target,concept,fault,rules,summary} }
+    sessions:    [],   // { id, bookId, date, hours, pages }
+    weeks:       {},   // { bookId: [ { id, label, dateRange, reflection:{rules,behavior,assessment}, aiResult } ] }
+    apiKey:      '',
+    model:       'llama-3.3-70b-versatile',
+    weeklyBook:  ''    // currently selected book for weekly section
+  };
+}
+
+/** Save the current app state to localStorage */
+function saveState() {
+  localStorage.setItem('coffeePages_state', JSON.stringify(state));
+}
+
+let state = loadState();
+let chartInstance = null;
+let chartMode = 'pages'; // 'pages' | 'hours'
+
+// ============================================================
+// UTILITY HELPERS
+// ============================================================
+
+/** Generate a short unique ID */
+function uid() {
+  return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+}
+
+/** Format date string to readable */
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+}
+
+/** Show a toast notification */
+function showToast(msg, type = 'default') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(20px)'; t.style.transition = '0.3s'; }, 2400);
+  setTimeout(() => t.remove(), 2700);
+}
+
+/** Get a book by ID */
+function getBook(id) {
+  return state.books.find(function(b) { return b.id === id; });
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleBackdropClick(e, id) {
+  if (e.target.id === id) closeModal(id);
+}
+
+// ============================================================
+// CHAT DRAWER
+// ============================================================
+
+function openChatDrawer() {
+  document.getElementById('chat-drawer').classList.add('open');
+  document.getElementById('chat-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeChatDrawer() {
+  document.getElementById('chat-drawer').classList.remove('open');
+  document.getElementById('chat-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('open-chat-btn').addEventListener('click', openChatDrawer);
+
+// ============================================================
+// API SETTINGS
+// ============================================================
+
+function saveApiSettings() {
+  state.apiKey = document.getElementById('api-key-input').value.trim();
+  state.model  = document.getElementById('model-select').value;
+  saveState();
+  showToast('API settings saved', 'success');
+  document.getElementById('api-settings-details').removeAttribute('open');
+}
+
+/** Load saved API key + model into inputs */
+function loadApiInputs() {
+  if (state.apiKey) document.getElementById('api-key-input').value = state.apiKey;
+  if (state.model)  document.getElementById('model-select').value  = state.model;
+}
+
+// ============================================================
+// BOOKS — RENDER
+// ============================================================
+
+function renderBooks() {
+  const list  = document.getElementById('book-list');
+  const empty = document.getElementById('book-empty');
+
+  if (state.books.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = state.books.map(function(book) {
+      return '<div class="book-item" id="book-item-' + book.id + '">' +
+        '<div class="book-info">' +
+          '<button class="book-title-btn" onclick="openBlueprint(\'' + book.id + '\')" title="Open Study Blueprint">' + escHtml(book.title) + '</button>' +
+          '<div class="book-author">' + escHtml(book.author || '—') + '</div>' +
+        '</div>' +
+        '<div class="book-actions">' +
+          '<select class="status-select" onchange="changeBookStatus(\'' + book.id + '\', this.value)">' +
+            '<option value="queued"'   + (book.status === 'queued'   ? ' selected' : '') + '>Queued</option>' +
+            '<option value="reading"'  + (book.status === 'reading'  ? ' selected' : '') + '>Reading</option>' +
+            '<option value="finished"' + (book.status === 'finished' ? ' selected' : '') + '>Finished</option>' +
+          '</select>' +
+          '<button class="btn btn-danger" onclick="deleteBook(\'' + book.id + '\')" title="Delete">' +
+            '<i data-lucide="trash-2" width="12" height="12"></i>' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  refreshBookDropdowns();
+  updateStats();
+  lucide.createIcons();
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function changeBookStatus(id, status) {
+  var book = getBook(id);
+  if (book) { book.status = status; saveState(); renderBooks(); }
+}
+
+function deleteBook(id) {
+  if (!confirm('Delete this book and all its data?')) return;
+  state.books    = state.books.filter(function(b) { return b.id !== id; });
+  state.sessions = state.sessions.filter(function(s) { return s.bookId !== id; });
+  delete state.weeks[id];
+  if (state.weeklyBook === id) state.weeklyBook = '';
+  saveState();
+  renderBooks();
+  renderSessions();
+  renderWeeks();
+  renderChart();
+  showToast('Book deleted.', 'error');
+}
+
+/** Populate all select dropdowns with current books */
+function refreshBookDropdowns() {
+  var opts = state.books.map(function(b) {
+    return '<option value="' + b.id + '">' + escHtml(b.title) + '</option>';
+  }).join('');
+
+  document.getElementById('log-book').innerHTML         = '<option value="">— Select a book —</option>' + opts;
+  document.getElementById('weekly-book-select').innerHTML = '<option value="">— Choose a book —</option>' + opts;
+
+  if (state.weeklyBook) document.getElementById('weekly-book-select').value = state.weeklyBook;
+}
+
+// ============================================================
+// BOOK MODAL — ADD / EDIT
+// ============================================================
+
+function openAddBookModal() {
+  document.getElementById('book-modal-title').textContent = 'Add New Book';
+  document.getElementById('book-title-input').value  = '';
+  document.getElementById('book-author-input').value = '';
+  document.getElementById('book-status-input').value = 'queued';
+  document.getElementById('book-edit-id').value      = '';
+  openModal('book-modal-backdrop');
+}
+
+function saveBook() {
+  var title  = document.getElementById('book-title-input').value.trim();
+  var author = document.getElementById('book-author-input').value.trim();
+  var status = document.getElementById('book-status-input').value;
+  var editId = document.getElementById('book-edit-id').value;
+
+  if (!title) { showToast('Please enter a book title.', 'error'); return; }
+
+  if (editId) {
+    var book = getBook(editId);
+    if (book) { book.title = title; book.author = author; book.status = status; }
+  } else {
+    state.books.push({ id: uid(), title: title, author: author, status: status,
+      blueprint: { target:'', concept:'', fault:'', rules:'', summary:'' } });
+  }
+
+  saveState();
+  renderBooks();
+  closeModal('book-modal-backdrop');
+  showToast(editId ? 'Book updated.' : 'Book added!', 'success');
+}
+
+document.getElementById('add-book-btn').addEventListener('click', openAddBookModal);
+
+// ============================================================
+// BLUEPRINT MODAL
+// ============================================================
+
+var _blueprintBookId = null;
+
+function openBlueprint(bookId) {
+  var book = getBook(bookId);
+  if (!book) return;
+  _blueprintBookId = bookId;
+
+  document.getElementById('blueprint-book-title').textContent  = book.title;
+  document.getElementById('blueprint-book-author').textContent = book.author || '';
+
+  var bp = book.blueprint || {};
+  document.getElementById('blueprint-body').innerHTML =
+    '<div class="blueprint-section">' +
+      '<div class="blueprint-label">① Target Problem</div>' +
+      '<textarea class="form-control" id="bp-target" placeholder="What problem does this book solve for you?">' + escHtml(bp.target||'') + '</textarea>' +
+    '</div>' +
+    '<div class="blueprint-section">' +
+      '<div class="blueprint-label">② Core Concept [C]</div>' +
+      '<textarea class="form-control" id="bp-concept" placeholder="The central idea or framework of the book…">' + escHtml(bp.concept||'') + '</textarea>' +
+    '</div>' +
+    '<div class="blueprint-section">' +
+      '<div class="blueprint-label">③ Past Fault [F]</div>' +
+      '<textarea class="form-control" id="bp-fault" placeholder="What mistake or habit did you identify in yourself?">' + escHtml(bp.fault||'') + '</textarea>' +
+    '</div>' +
+    '<div class="blueprint-section">' +
+      '<div class="blueprint-label">④ Weekly Actionable Rules [A] — If/Then Format</div>' +
+      '<textarea class="form-control" id="bp-rules" placeholder="If [trigger], then [action]…">' + escHtml(bp.rules||'') + '</textarea>' +
+    '</div>' +
+    '<div class="blueprint-section">' +
+      '<div class="blueprint-label">⑤ Chapter Summary</div>' +
+      '<textarea class="form-control" id="bp-summary" placeholder="Key takeaways from chapters you\'ve read…">' + escHtml(bp.summary||'') + '</textarea>' +
+    '</div>';
+
+  openModal('blueprint-modal-backdrop');
+}
+
+function saveBlueprint() {
+  var book = getBook(_blueprintBookId);
+  if (!book) return;
+  book.blueprint = {
+    target:  document.getElementById('bp-target').value.trim(),
+    concept: document.getElementById('bp-concept').value.trim(),
+    fault:   document.getElementById('bp-fault').value.trim(),
+    rules:   document.getElementById('bp-rules').value.trim(),
+    summary: document.getElementById('bp-summary').value.trim()
+  };
+  saveState();
+  closeModal('blueprint-modal-backdrop');
+  showToast('Blueprint saved!', 'success');
+}
+
+// ============================================================
+// SESSION LOG — RENDER & ADD
+// ============================================================
+
+function renderSessions() {
+  var tbody = document.getElementById('log-table-body');
+  if (state.sessions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;font-size:0.78rem;">No sessions logged yet.</td></tr>';
+  } else {
+    var sorted = state.sessions.slice().reverse();
+    tbody.innerHTML = sorted.map(function(s) {
+      var book = getBook(s.bookId);
+      return '<tr>' +
+        '<td>' + (book ? escHtml(book.title) : '<span style="color:var(--text-muted)">Deleted</span>') + '</td>' +
+        '<td class="muted">' + fmtDate(s.date) + '</td>' +
+        '<td>' + s.hours + 'h</td>' +
+        '<td>' + s.pages + 'p</td>' +
+        '<td><button class="btn btn-danger" onclick="deleteSession(\'' + s.id + '\')"><i data-lucide="x" width="11" height="11"></i></button></td>' +
+      '</tr>';
+    }).join('');
+  }
+  lucide.createIcons();
+  updateStats();
+}
+
+function deleteSession(id) {
+  state.sessions = state.sessions.filter(function(s) { return s.id !== id; });
+  saveState();
+  renderSessions();
+  renderChart();
+}
+
+function logSession() {
+  var bookId = document.getElementById('log-book').value;
+  var date   = document.getElementById('log-date').value;
+  var hours  = parseFloat(document.getElementById('log-hours').value) || 0;
+  var pages  = parseInt(document.getElementById('log-pages').value)   || 0;
+
+  if (!bookId) { showToast('Select a book first.', 'error'); return; }
+  if (!date)   { showToast('Pick a date.', 'error'); return; }
+  if (hours <= 0 && pages <= 0) { showToast('Enter hours or pages.', 'error'); return; }
+
+  state.sessions.push({ id: uid(), bookId: bookId, date: date, hours: hours, pages: pages });
+  saveState();
+  renderSessions();
+  renderChart();
+  showToast('Session logged!', 'success');
+
+  document.getElementById('log-hours').value = '';
+  document.getElementById('log-pages').value = '';
+}
+
+document.getElementById('log-session-btn').addEventListener('click', logSession);
+
+// Set today's date as default
+document.getElementById('log-date').valueAsDate = new Date();
+
+// ============================================================
+// STATS
+// ============================================================
+
+function updateStats() {
+  document.getElementById('stat-books').textContent = state.books.length;
+  var totalHours = state.sessions.reduce(function(a, s) { return a + (parseFloat(s.hours)||0); }, 0);
+  var totalPages = state.sessions.reduce(function(a, s) { return a + (parseInt(s.pages)||0); }, 0);
+  document.getElementById('stat-hours').textContent = totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1);
+  document.getElementById('stat-pages').textContent = totalPages;
+}
+
+// ============================================================
+// CHART
+// ============================================================
+
+function getChartData(mode) {
+  var map = {};
+  state.sessions.forEach(function(s) {
+    if (!s.date) return;
+    var val = mode === 'pages' ? (parseInt(s.pages)||0) : (parseFloat(s.hours)||0);
+    map[s.date] = (map[s.date] || 0) + val;
+  });
+
+  var dates = Object.keys(map).sort();
+  return {
+    labels: dates.map(fmtDate),
+    data:   dates.map(function(d) { return map[d]; })
+  };
+}
+
+function renderChart() {
+  var ctx = document.getElementById('reading-chart').getContext('2d');
+  var chartData = getChartData(chartMode);
+  var labels = chartData.labels;
+  var data   = chartData.data;
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  var noData = data.length === 0;
+  var displayLabels = noData ? ['Start Reading!'] : labels;
+  var displayData   = noData ? [0]               : data;
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: displayLabels,
+      datasets: [{
+        label: chartMode === 'pages' ? 'Pages Read' : 'Hours Spent',
+        data: displayData,
+        borderColor: '#d4a373',
+        backgroundColor: 'rgba(212,163,115,0.08)',
+        pointBackgroundColor: '#d4a373',
+        pointBorderColor: '#1a1614',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.4,
+        fill: true,
+        borderWidth: 2.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#2e2622',
+          borderColor: '#3a302a',
+          borderWidth: 1,
+          titleColor: '#f4ebd9',
+          bodyColor: '#a89f91',
+          padding: 10,
+          cornerRadius: 8
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(58,48,42,0.5)' },
+          ticks: { color: '#a89f91', font: { size: 11, family:'Inter' } },
+          border: { display: false }
+        },
+        y: {
+          grid: { color: 'rgba(58,48,42,0.5)' },
+          ticks: { color: '#a89f91', font: { size: 11, family:'Inter' } },
+          border: { display: false },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+function switchChartMode(mode) {
+  chartMode = mode;
+  document.getElementById('toggle-pages').classList.toggle('active', mode === 'pages');
+  document.getElementById('toggle-hours').classList.toggle('active', mode === 'hours');
+  renderChart();
+}
+
+// ============================================================
+// WEEKLY SECTION — RENDER
+// ============================================================
+
+document.getElementById('weekly-book-select').addEventListener('change', function() {
+  state.weeklyBook = this.value;
+  saveState();
+  renderWeeks();
+});
+
+function renderWeeks() {
+  var bookId = state.weeklyBook;
+  var grid   = document.getElementById('weeks-grid');
+
+  if (!bookId) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><i data-lucide="book-open" width="28" height="28"></i><br>Select a book above to view its weekly reflections.</div>';
+    lucide.createIcons();
+    return;
+  }
+
+  var weeks = state.weeks[bookId] || [];
+  var cardsHtml = weeks.map(function(week) { return buildWeekCard(week, bookId); }).join('');
+  var addBtn    = '<button class="week-card-add" onclick="addWeek(\'' + bookId + '\')"><i data-lucide="plus-circle" width="24" height="24"></i>Add Week</button>';
+
+  grid.innerHTML = cardsHtml + addBtn;
+  lucide.createIcons();
+}
+
+function buildWeekCard(week, bookId) {
+  var r = week.reflection || {};
+  var hasReflection = r.rules || r.behavior || r.assessment;
+  var dot = hasReflection
+    ? '<span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block;margin-left:4px;"></span>'
+    : '';
+
+  var aiResultHtml = week.aiResult
+    ? '<div class="ai-result visible" id="ai-result-' + week.id + '">' + escHtml(week.aiResult) + '</div>'
+    : '<div class="ai-result" id="ai-result-' + week.id + '"></div>';
+
+  return '<div class="week-card" id="week-card-' + week.id + '">' +
+    '<div>' +
+      '<div class="week-card-title">' + escHtml(week.label) + dot + '</div>' +
+      '<div class="week-card-date">' + escHtml(week.dateRange || 'No date set') + '</div>' +
+    '</div>' +
+    '<div class="week-card-actions">' +
+      '<button class="btn btn-surface btn-sm w-full" onclick="openReflection(\'' + bookId + '\',\'' + week.id + '\')">' +
+        '<i data-lucide="pen-line" width="12" height="12"></i> Open Reflection' +
+      '</button>' +
+      '<button class="btn btn-ai btn-sm w-full" onclick="analyzeWeek(\'' + bookId + '\',\'' + week.id + '\')">' +
+        '<i data-lucide="zap" width="12" height="12"></i> Analyze with AI' +
+      '</button>' +
+      '<div id="ai-loader-' + week.id + '" style="display:none;" class="ai-thinking">' +
+        '<div class="dot-loader"><span></span><span></span><span></span></div> Analyzing…' +
+      '</div>' +
+    '</div>' +
+    aiResultHtml +
+    '<button class="btn btn-danger btn-sm" style="align-self:flex-end;margin-top:auto;" onclick="deleteWeek(\'' + bookId + '\',\'' + week.id + '\')">' +
+      '<i data-lucide="trash-2" width="11" height="11"></i> Remove' +
+    '</button>' +
+  '</div>';
+}
+
+function addWeek(bookId) {
+  if (!state.weeks[bookId]) state.weeks[bookId] = [];
+  var num   = state.weeks[bookId].length + 1;
+  var today = new Date();
+  var end   = new Date(today); end.setDate(end.getDate() + 6);
+  var fmt   = function(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric' }); };
+
+  state.weeks[bookId].push({
+    id:         uid(),
+    label:      'Week ' + num,
+    dateRange:  fmt(today) + ' – ' + fmt(end),
+    reflection: { rules:'', behavior:'', assessment:'' },
+    aiResult:   ''
+  });
+
+  saveState();
+  renderWeeks();
+}
+
+function deleteWeek(bookId, weekId) {
+  if (!state.weeks[bookId]) return;
+  state.weeks[bookId] = state.weeks[bookId].filter(function(w) { return w.id !== weekId; });
+  saveState();
+  renderWeeks();
+}
+
+// ============================================================
+// REFLECTION MODAL
+// ============================================================
+
+function openReflection(bookId, weekId) {
+  var weeks = state.weeks[bookId] || [];
+  var week  = weeks.find(function(w) { return w.id === weekId; });
+  if (!week) return;
+
+  var book = getBook(bookId);
+  document.getElementById('reflection-modal-title').textContent   = week.label + ' — Reflection';
+  document.getElementById('reflection-modal-subtitle').textContent = book ? book.title : '';
+  document.getElementById('refl-rules').value      = (week.reflection && week.reflection.rules)      || '';
+  document.getElementById('refl-behavior').value   = (week.reflection && week.reflection.behavior)   || '';
+  document.getElementById('refl-assessment').value = (week.reflection && week.reflection.assessment) || '';
+  document.getElementById('refl-week-id').value    = weekId;
+  document.getElementById('refl-book-id').value    = bookId;
+
+  openModal('reflection-modal-backdrop');
+}
+
+function saveReflection() {
+  var weekId = document.getElementById('refl-week-id').value;
+  var bookId = document.getElementById('refl-book-id').value;
+  var weeks  = state.weeks[bookId] || [];
+  var week   = weeks.find(function(w) { return w.id === weekId; });
+  if (!week) return;
+
+  week.reflection = {
+    rules:      document.getElementById('refl-rules').value.trim(),
+    behavior:   document.getElementById('refl-behavior').value.trim(),
+    assessment: document.getElementById('refl-assessment').value.trim()
+  };
+
+  saveState();
+  renderWeeks();
+  closeModal('reflection-modal-backdrop');
+  showToast('Reflection saved!', 'success');
+}
+
+// ============================================================
+// AI — WEEK ANALYSIS
+// ============================================================
+
+async function analyzeWeek(bookId, weekId) {
+  var apiKey = state.apiKey;
+  if (!apiKey) {
+    showToast('Add your Groq API key in AI Discussion → API Settings.', 'error');
+    openChatDrawer();
+    document.getElementById('api-settings-details').setAttribute('open', '');
+    return;
+  }
+
+  var book  = getBook(bookId);
+  var weeks = state.weeks[bookId] || [];
+  var week  = weeks.find(function(w) { return w.id === weekId; });
+  if (!week) return;
+
+  var bp = (book && book.blueprint) || {};
+  var r  = week.reflection || {};
+
+  var loader = document.getElementById('ai-loader-' + weekId);
+  var result = document.getElementById('ai-result-' + weekId);
+  var btn    = document.querySelector('#week-card-' + weekId + ' .btn-ai');
+
+  loader.style.display = 'inline-flex';
+  if (btn) btn.disabled = true;
+
+  var prompt = 'You are a behavioral coach and reading advisor. The user is reading "' + (book ? book.title : 'Unknown') + '" by ' + (book ? book.author : 'Unknown') + '.\n\n' +
+    'STUDY BLUEPRINT:\n' +
+    '- Target Problem: ' + (bp.target  || 'Not specified') + '\n' +
+    '- Core Concept: '   + (bp.concept || 'Not specified') + '\n' +
+    '- Past Fault: '     + (bp.fault   || 'Not specified') + '\n' +
+    '- Actionable Rules: ' + (bp.rules  || 'Not specified') + '\n' +
+    '- Chapter Summary: '  + (bp.summary|| 'Not specified') + '\n\n' +
+    'WEEK: ' + week.label + ' (' + week.dateRange + ')\n' +
+    'REFLECTION:\n' +
+    '- Rules Applied: '       + (r.rules      || 'None noted') + '\n' +
+    '- Behavior & Reactions: ' + (r.behavior   || 'None noted') + '\n' +
+    '- Personal Assessment: '  + (r.assessment || 'None noted') + '\n\n' +
+    'Provide a concise, insightful behavioral analysis (4–6 sentences max). Compare their reported behavior against the book\'s concepts. Identify gaps, highlight strengths, and give 2 specific actionable improvements for next week. Keep the tone warm, professional, and encouraging.';
+
+  try {
+    var resp = await callGroqAPI([{ role: 'user', content: prompt }]);
+    week.aiResult = resp;
+    result.textContent = resp;
+    result.classList.add('visible');
+    saveState();
+    showToast('AI analysis complete!', 'success');
+  } catch(e) {
+    result.textContent = 'Error: ' + e.message;
+    result.classList.add('visible');
+    showToast('AI error: ' + e.message, 'error');
+  } finally {
+    loader.style.display = 'none';
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ============================================================
+// AI — CHAT
+// ============================================================
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+}
+
+async function sendChatMessage() {
+  var input = document.getElementById('chat-input');
+  var msg   = input.value.trim();
+  if (!msg) return;
+
+  var apiKey = state.apiKey;
+  if (!apiKey) {
+    appendChatMsg('assistant', 'Please add your Groq API key in API Settings below first.');
+    document.getElementById('api-settings-details').setAttribute('open','');
+    return;
+  }
+
+  appendChatMsg('user', msg);
+  input.value = '';
+  input.style.height = 'auto';
+
+  var systemPrompt = buildSystemContext();
+  var history = buildChatHistory();
+
+  // Show loader bubble
+  var loaderId = 'loader-' + uid();
+  var loaderEl = document.createElement('div');
+  loaderEl.className = 'chat-msg assistant';
+  loaderEl.id = loaderId;
+  loaderEl.innerHTML = '<div class="dot-loader"><span></span><span></span><span></span></div>';
+  document.getElementById('chat-messages').appendChild(loaderEl);
+  scrollChatToBottom();
+
+  try {
+    var messages = [{ role: 'system', content: systemPrompt }]
+      .concat(history)
+      .concat([{ role: 'user', content: msg }]);
+    var reply = await callGroqAPI(messages);
+    loaderEl.remove();
+    appendChatMsg('assistant', reply);
+  } catch(e) {
+    loaderEl.remove();
+    appendChatMsg('assistant', 'Error: ' + e.message);
+  }
+}
+
+function appendChatMsg(role, content) {
+  var container = document.getElementById('chat-messages');
+  var el = document.createElement('div');
+  el.className = 'chat-msg ' + role;
+  el.textContent = content;
+  container.appendChild(el);
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  var c = document.getElementById('chat-messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+function buildChatHistory() {
+  var msgs = document.querySelectorAll('#chat-messages .chat-msg.user, #chat-messages .chat-msg.assistant');
+  var history = [];
+  msgs.forEach(function(m) {
+    if (m.classList.contains('user'))      history.push({ role:'user',      content: m.textContent });
+    else if (m.classList.contains('assistant')) history.push({ role:'assistant', content: m.textContent });
+  });
+  return history.slice(-12); // Keep last 12 for context
+}
+
+function buildSystemContext() {
+  var bookList = state.books.map(function(b) {
+    var bp = b.blueprint || {};
+    return '"' + b.title + '" by ' + b.author + ' [' + b.status + ']\n' +
+      '  Blueprint: Target="' + bp.target + '", Concept="' + bp.concept + '", Fault="' + bp.fault + '", Rules="' + bp.rules + '"';
+  }).join('\n') || 'No books tracked yet.';
+
+  var totalH = state.sessions.reduce(function(a,s) { return a+(parseFloat(s.hours)||0); }, 0).toFixed(1);
+  var totalP = state.sessions.reduce(function(a,s) { return a+(parseInt(s.pages)||0); }, 0);
+  var sessionSummary = state.sessions.length > 0
+    ? state.sessions.length + ' sessions logged. Total: ' + totalH + 'h, ' + totalP + ' pages.'
+    : 'No sessions logged yet.';
+
+  var weeklyData = Object.entries(state.weeks).map(function(entry) {
+    var bId = entry[0]; var weeks = entry[1];
+    var book = getBook(bId);
+    return 'Book: ' + (book ? book.title : 'Unknown') + '\n' + weeks.map(function(w) {
+      var r = w.reflection || {};
+      return '  ' + w.label + ': Rules="' + r.rules + '", Behavior="' + r.behavior + '", Assessment="' + r.assessment + '"';
+    }).join('\n');
+  }).join('\n\n') || 'No weekly reflections yet.';
+
+  return 'You are a warm, insightful AI reading coach embedded in the "Coffee & Pages Dashboard". You have full access to the user\'s reading data below.\n\n' +
+    '=== READING LIST ===\n' + bookList + '\n\n' +
+    '=== SESSION STATS ===\n' + sessionSummary + '\n\n' +
+    '=== WEEKLY REFLECTIONS ===\n' + weeklyData + '\n\n' +
+    'Keep responses concise, warm, and actionable. Personalize answers using the user\'s data.';
+}
+
+// Auto-resize chat textarea
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// ============================================================
+// GROQ API CALL
+// ============================================================
+
+/**
+ * Calls the Groq API with a messages array.
+ * @param {Array} messages - Array of {role, content} objects
+ * @returns {Promise<string>} - The assistant's reply text
+ */
+async function callGroqAPI(messages) {
+  var apiKey = state.apiKey;
+  var model  = state.model || 'llama-3.3-70b-versatile';
+
+  if (!apiKey) throw new Error('No API key set. Open the AI Discussion drawer and add your Groq API key.');
+
+  var resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model:       model,
+      messages:    messages,
+      max_tokens:  1024,
+      temperature: 0.7
+    })
+  });
+
+  if (!resp.ok) {
+    var errBody = await resp.json().catch(function() { return {}; });
+    throw new Error((errBody.error && errBody.error.message) || 'HTTP ' + resp.status);
+  }
+
+  var data = await resp.json();
+  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '(Empty response)').trim();
+}
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+
+function init() {
+  loadApiInputs();
+
+  // Pre-populate with sample data if empty (first run)
+  if (state.books.length === 0) {
+    var id1 = uid(), id2 = uid();
+    var today = new Date().toISOString().split('T')[0];
+
+    state.books = [
+      { id: id1, title: 'Atomic Habits', author: 'James Clear', status: 'reading',
+        blueprint: {
+          target:  'Build consistent reading and exercise habits.',
+          concept: 'Tiny changes compound into remarkable results. Systems beat goals.',
+          fault:   'I relied on motivation instead of environment design and cues.',
+          rules:   'If I sit at my desk in the morning, then I open my book before my phone.\nIf I finish a chapter, then I log the session immediately.',
+          summary: 'Ch1: Habits are the compound interest of self-improvement. Identity-based habits are more durable.'
+        }
+      },
+      { id: id2, title: 'Deep Work', author: 'Cal Newport', status: 'queued',
+        blueprint: { target:'', concept:'', fault:'', rules:'', summary:'' }
+      }
+    ];
+
+    // Sample sessions across multiple days
+    var d = function(offset) {
+      var dt = new Date(); dt.setDate(dt.getDate() - offset);
+      return dt.toISOString().split('T')[0];
+    };
+    state.sessions = [
+      { id: uid(), bookId: id1, date: d(6), hours: 1,   pages: 22 },
+      { id: uid(), bookId: id1, date: d(5), hours: 0.5, pages: 10 },
+      { id: uid(), bookId: id1, date: d(3), hours: 1.5, pages: 32 },
+      { id: uid(), bookId: id1, date: d(1), hours: 2,   pages: 40 },
+      { id: uid(), bookId: id1, date: today, hours: 1,  pages: 18 }
+    ];
+
+    // Sample weekly reflection
+    state.weeks[id1] = [{
+      id: uid(), label: 'Week 1', dateRange: 'Sep 1 – Sep 7',
+      reflection: {
+        rules:      'Applied the 2-minute rule: opened book before checking phone each morning.',
+        behavior:   'Noticed resistance on Day 3 but pushed through. Environment design helped significantly.',
+        assessment: '6/10 — Good start, need to be more consistent on evenings.'
+      },
+      aiResult: ''
+    }];
+    state.weeklyBook = id1;
+
+    saveState();
+  }
+
+  renderBooks();
+  renderSessions();
+  renderChart();
+
+  // Set correct weekly book select value then render
+  if (state.weeklyBook) {
+    document.getElementById('weekly-book-select').value = state.weeklyBook;
+  }
+  renderWeeks();
+
+  lucide.createIcons();
+}
+
+// Boot
+lucide.createIcons();
+init();
+</script>
+</body>
+</html>
