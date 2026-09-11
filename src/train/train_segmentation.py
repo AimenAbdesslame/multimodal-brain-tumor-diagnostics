@@ -56,7 +56,7 @@ w.init(
 ## why patient-level split is important :
 ## In medical imaging, especially in tasks like brain tumor segmentation, it's crucial to split the dataset at the patient level rather than at the slice level. This is because slices from the same patient are often highly correlated, and if slices from the same patient appear in both the training and validation sets, it can lead to data leakage. This means that the model might perform well on the validation set not because it has learned to generalize, but because it has seen very similar data during training. By ensuring that all slices from a single patient are only in either the training or validation set, we can better assess the model's ability to generalize to unseen patients. 
 patient_dirs = sorted(
-    glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*")) , recursive=True
+    glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*"), recursive=True) 
     )
 train_data, val_data = train_test_split(patient_dirs , test_size =  config.VAL_SPLIT , random_state = config.RANDOM_SEED)
 
