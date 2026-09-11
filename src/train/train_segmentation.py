@@ -8,7 +8,8 @@ import wandb as w
 from src.data.tumor_dataset import BraTS2DDataset
 from src.models.unet_segmentation import UNet
 from src.losses.SegmentationLoss import SegmentationLoss
-import src.config as config 
+import src.config as config
+import time 
 
 
 
@@ -56,7 +57,7 @@ w.init(
 ## why patient-level split is important :
 ## In medical imaging, especially in tasks like brain tumor segmentation, it's crucial to split the dataset at the patient level rather than at the slice level. This is because slices from the same patient are often highly correlated, and if slices from the same patient appear in both the training and validation sets, it can lead to data leakage. This means that the model might perform well on the validation set not because it has learned to generalize, but because it has seen very similar data during training. By ensuring that all slices from a single patient are only in either the training or validation set, we can better assess the model's ability to generalize to unseen patients. 
 patient_dirs = sorted(
-    glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*"), recursive=True) 
+    glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*"),recursive=True) 
     )
 train_data, val_data = train_test_split(patient_dirs , test_size =  config.VAL_SPLIT , random_state = config.RANDOM_SEED)
 
@@ -93,13 +94,16 @@ model = UNet(in_channels = config.IN_CHANNELS , out_channels = config.OUT_CHANNE
 loss_fn = SegmentationLoss().to(config.DEVICE)
 optimizer = torch.optim.Adam(model.parameters() , lr = config.LEARNING_RATE)
 best_val_dice = 0.0 # instance variable to keep track of the best validation dice score  
-
+patience = 5
+patience_counter = 0
+# Ensure output directory exists before training starts
+os.makedirs(config.OUTPUT_DIR, exist_ok=True)
 #block 5 : training loop : 
 for epoch in range(config.EPOCHS) :
     print(f"Epoch: [{epoch+1}/{config.EPOCHS}] - Training and Validation")
     model.train()
     running_train_loss = 0.0
-    
+    epoch_start_time = time.time()
     #training phase : 
     for images , masks in train_loader : 
         images , masks = images.to(config.DEVICE) , masks.to(config.DEVICE)
@@ -128,19 +132,37 @@ for epoch in range(config.EPOCHS) :
     epoch_val_loss = running_val_loss / len(val_loader)
     epoch_val_dice = running_val_dice / len(val_loader)
     print(f"Epoch [{epoch+1}/{config.EPOCHS}] - Validation Loss: {epoch_val_loss:.4f} - Validation Dice: {epoch_val_dice:.4f}")
-    
+    epoch_time = time.time() - epoch_start_time
+    print(f"Epoch [{epoch+1}/{config.EPOCHS}] completed in {epoch_time:.2f} seconds.")
+    peak_gpu_mb = torch.cuda.max_memory_allocated() / (1024 ** 2) # Memory in MB
     ## loging the metrics to wandb : 
     w.log(
         {
             "epoch": epoch + 1,
             "train_loss": epoch_train_loss,
             "val_loss": epoch_val_loss,
-            "val_dice": epoch_val_dice
+            "val_dice": epoch_val_dice,
+            "epoch_time_sec": epoch_time,
+            "peak_gpu_memory_MB": peak_gpu_mb
         }
     )
     
     ##checkpointing the model if the validation dice score improves :
-    if epoch_val_dice > best_val_dice :
+# --- Checkpointing & Early Stopping Logic ---
+    if epoch_val_dice > best_val_dice:
         best_val_dice = epoch_val_dice
-        torch.save(model.state_dict() , os.path.join(config.OUTPUT_DIR , "best_model.pth"))
-        print(f"Best model saved with Validation Dice: {best_val_dice:.4f}")
+        patience_counter = 0
+        checkpoint_path = os.path.join(config.OUTPUT_DIR, "best_model.pth")
+        torch.save(model.state_dict(), checkpoint_path)
+        print(f"--> Saved new best model (Val Dice: {best_val_dice:.4f})")
+    else:
+        patience_counter += 1
+        print(f"--> No improvement in Val Dice. Patience: {patience_counter}/{patience}")
+        if patience_counter >= patience:
+            print(f"Early stopping triggered at epoch {epoch+1}")
+            break
+        
+        
+# (At the very bottom of the file, after the for-loop)
+print("Training process finished.")
+w.finish()
