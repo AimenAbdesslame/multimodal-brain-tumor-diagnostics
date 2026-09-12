@@ -10,9 +10,23 @@ import wandb as w
 from src.data.tumor_dataset import BraTS2DDataset
 from src.models.unet_segmentation import UNet
 from src.losses.SegmentationLoss import SegmentationLoss
-from src.train.train_segmentation import build_slice_indexes, dice_score
+from src.train.train_segmentation import dice_score
 import src.config as config
 
+
+def get_slice_paths(patient_dirs):
+    """
+    Collects pre-extracted .npz slice files belonging strictly to the assigned patient directories.
+    Ensures patient-level separation and prevents data leakage across train/val splits.
+    """
+    slice_paths = []
+    for p_dir in patient_dirs:
+        if os.path.isdir(p_dir):
+            slices = glob.glob(os.path.join(p_dir, "*.npz"))
+        else:
+            slices = glob.glob(f"{p_dir}*.npz")
+        slice_paths.extend(slices)
+    return sorted(slice_paths)
 
 
 sweep_config = {
@@ -53,16 +67,19 @@ def train_sweep():
     batch_sz = w.config.batch_size
     sweep_epochs = 5  # Budget limit per trial
 
-    # 3. Build patient splits and slice indices
-    patient_dirs = sorted(glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*"), recursive=True))
+    # 3. Build patient splits and collect .npz slice paths directly
+    patient_dirs = sorted(glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*")))
     train_data, val_data = train_test_split(patient_dirs, test_size=config.VAL_SPLIT, random_state=config.RANDOM_SEED)
 
+    train_slice_paths = get_slice_paths(train_data)
+    val_slice_paths = get_slice_paths(val_data)
+
     train_loader = DataLoader(
-        BraTS2DDataset(build_slice_indexes(train_data)),
+        BraTS2DDataset(train_slice_paths),
         shuffle=True, num_workers=0, pin_memory=True, batch_size=batch_sz
     )
     val_loader = DataLoader(
-        BraTS2DDataset(build_slice_indexes(val_data)),
+        BraTS2DDataset(val_slice_paths),
         shuffle=False, num_workers=0, pin_memory=True, batch_size=batch_sz
     )
 
@@ -114,7 +131,6 @@ def train_sweep():
             "epoch_time_sec": epoch_time,
             "peak_gpu_memory_MB": peak_gpu_mb
         })
-
 
 
 # block 3: execution launcher
