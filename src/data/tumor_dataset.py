@@ -6,24 +6,27 @@ from torch.utils.data import Dataset
 
 class BraTS2DDataset(Dataset):
     """
-    High-performance PyTorch Dataset loading pre-extracted 2D .npz slice files.
-    Eliminates NIfTI decompressing bottlenecks for instant batch retrieval.
+    Flexible PyTorch Dataset for loading pre-extracted 2D .npz slices.
+    Accepts either a directory path (str) or an explicit list of .npz file paths.
     """
-    def __init__(self, data_dir: str, transform=None, cache_in_ram: bool = False):
-        self.data_dir = data_dir
+    def __init__(self, data_source, transform=None, cache_in_ram: bool = False):
         self.transform = transform
         self.cache_in_ram = cache_in_ram
         
-        # Collect all pre-extracted slice files
-        self.slice_paths = sorted(glob.glob(os.path.join(data_dir, "*.npz")))
-        
-        if not self.slice_paths:
-            raise FileNotFoundError(f"No .npz files found in directory: {data_dir}")
+        # Handle both a list of slice paths AND a single directory string
+        if isinstance(data_source, list):
+            self.slice_paths = sorted(data_source)
+        elif isinstance(data_source, str):
+            self.slice_paths = sorted(glob.glob(os.path.join(data_source, "*.npz")))
+        else:
+            raise TypeError(f"Expected data_source to be a list or str, got {type(data_source)}")
 
-        # Optional: Load all slices into RAM if dataset size permits (~2-4 GB)
+        if not self.slice_paths:
+            raise FileNotFoundError(f"No .npz files found for input: {data_source}")
+
+        # Optional: Load all slices into RAM
         self.ram_cache = []
         if self.cache_in_ram:
-            print(f"Caching {len(self.slice_paths)} slices directly into RAM...")
             for path in self.slice_paths:
                 with np.load(path) as data:
                     self.ram_cache.append((data["image"], data["mask"]))
@@ -37,10 +40,9 @@ class BraTS2DDataset(Dataset):
         else:
             file_path = self.slice_paths[idx]
             with np.load(file_path) as data:
-                image = data["image"]  # Expected shape: (4, H, W) for 4 MRI sequences
-                mask = data["mask"]    # Expected shape: (H, W) for multi-class target
+                image = data["image"]  # Shape: (4, H, W)
+                mask = data["mask"]    # Shape: (H, W)
 
-        # Convert numpy arrays to native PyTorch Tensors
         image_tensor = torch.from_numpy(image).float()
         mask_tensor = torch.from_numpy(mask).long()
 
