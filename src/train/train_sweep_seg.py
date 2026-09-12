@@ -59,11 +59,11 @@ def train_sweep():
 
     train_loader = DataLoader(
         BraTS2DDataset(build_slice_indexes(train_data)),
-        shuffle=True, num_workers=4, pin_memory=True, batch_size=batch_sz
+        shuffle=True, num_workers=0, pin_memory=True, batch_size=batch_sz
     )
     val_loader = DataLoader(
         BraTS2DDataset(build_slice_indexes(val_data)),
-        shuffle=False, num_workers=4, pin_memory=True, batch_size=batch_sz
+        shuffle=False, num_workers=0, pin_memory=True, batch_size=batch_sz
     )
 
     # 4. Instantiate model & optimizer with sampled hyperparameters
