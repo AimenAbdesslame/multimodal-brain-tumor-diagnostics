@@ -67,8 +67,9 @@ def train_sweep():
     batch_sz = w.config.batch_size
     sweep_epochs = 5  # Budget limit per trial
 
-    # 3. Build patient splits and collect .npz slice paths directly
-    patient_dirs = sorted(glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*")))
+    # 3. Build patient splits and collect .npz slice paths directly from config.OUTPUT_DIR
+    search_dir = config.OUTPUT_DIR if glob.glob(os.path.join(config.OUTPUT_DIR, "BraTS20_Training_*")) else config.DATA_DIR
+    patient_dirs = sorted(glob.glob(os.path.join(search_dir, "BraTS20_Training_*")))
     train_data, val_data = train_test_split(patient_dirs, test_size=config.VAL_SPLIT, random_state=config.RANDOM_SEED)
 
     train_slice_paths = get_slice_paths(train_data)
