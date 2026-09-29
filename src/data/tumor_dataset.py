@@ -40,11 +40,11 @@ class BraTS2DDataset(Dataset):
         else:
             file_path = self.slice_paths[idx]
             with np.load(file_path) as data:
-                image = data["image"]  # Shape: (4, H, W)
+                image = data["image"]  # Shape: (1, H, W)
                 mask = data["mask"]    # Shape: (H, W)
 
         image_tensor = torch.from_numpy(image).float()
-        mask_tensor = torch.from_numpy(mask).long()
+        mask_tensor = torch.from_numpy(mask).float()
 
         if self.transform:
             augmented = self.transform(image=image_tensor, mask=mask_tensor)
