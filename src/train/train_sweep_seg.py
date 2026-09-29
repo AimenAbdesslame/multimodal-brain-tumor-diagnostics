@@ -67,13 +67,32 @@ def train_sweep():
     batch_sz = w.config.batch_size
     sweep_epochs = 5  # Budget limit per trial
 
-    # 3. Build patient splits and collect .npz slice paths directly from config.OUTPUT_DIR
-    search_dir = config.OUTPUT_DIR if glob.glob(os.path.join(config.OUTPUT_DIR, "BraTS20_Training_*")) else config.DATA_DIR
-    patient_dirs = sorted(glob.glob(os.path.join(search_dir, "BraTS20_Training_*")))
-    train_data, val_data = train_test_split(patient_dirs, test_size=config.VAL_SPLIT, random_state=config.RANDOM_SEED)
+    # 3. Discover ALL .npz files recursively (guarantees finding all 36,400 slices)
+    all_npz_files = glob.glob(os.path.join(config.OUTPUT_DIR, "**/*.npz"), recursive=True)
+    if not all_npz_files:
+        all_npz_files = glob.glob("/kaggle/working/**/*.npz", recursive=True)
 
-    train_slice_paths = get_slice_paths(train_data)
-    val_slice_paths = get_slice_paths(val_data)
+    if not all_npz_files:
+        raise FileNotFoundError(f"No .npz files found in {config.OUTPUT_DIR} or /kaggle/working/")
+
+    # 4. Group slices by patient directory to ensure leakage-free patient-level split
+    patient_map = {}
+    for path in all_npz_files:
+        p_dir = os.path.dirname(path)
+        if p_dir not in patient_map:
+            patient_map[p_dir] = []
+        patient_map[p_dir].append(path)
+
+    patient_dirs = sorted(list(patient_map.keys()))
+    train_dirs, val_dirs = train_test_split(
+        patient_dirs, test_size=config.VAL_SPLIT, random_state=config.RANDOM_SEED
+    )
+
+    train_slice_paths = [p for p_dir in train_dirs for p in patient_map[p_dir]]
+    val_slice_paths = [p for p_dir in val_dirs for p in patient_map[p_dir]]
+
+    print(f"[Sweep Run] Found {len(all_npz_files)} total slices across {len(patient_dirs)} patients.")
+    print(f"Train slices: {len(train_slice_paths)} | Val slices: {len(val_slice_paths)}")
 
     train_loader = DataLoader(
         BraTS2DDataset(train_slice_paths),
@@ -84,12 +103,12 @@ def train_sweep():
         shuffle=False, num_workers=0, pin_memory=True, batch_size=batch_sz
     )
 
-    # 4. Instantiate model & optimizer with sampled hyperparameters
+    # 5. Instantiate model & optimizer with sampled hyperparameters
     model = UNet(in_channels=config.IN_CHANNELS, out_channels=config.OUT_CHANNELS).to(config.DEVICE)
     loss_fn = SegmentationLoss().to(config.DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
 
-    # 5. Execute 5-epoch training loop
+    # 6. Execute 5-epoch training loop
     for epoch in range(sweep_epochs):
         epoch_start_time = time.time()
         
