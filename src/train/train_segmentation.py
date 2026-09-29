@@ -55,19 +55,32 @@ if __name__ == "__main__":
         },
     )
     
-    ## patient directory spliting :
-    ## why patient-level split is important :
-    ## In medical imaging, especially in tasks like brain tumor segmentation, it's crucial to split the dataset at the patient level rather than at the slice level. This is because slices from the same patient are often highly correlated, and if slices from the same patient appear in both the training and validation sets, it can lead to data leakage. This means that the model might perform well on the validation set not because it has learned to generalize, but because it has seen very similar data during training. By ensuring that all slices from a single patient are only in either the training or validation set, we can better assess the model's ability to generalize to unseen patients. 
-    patient_dirs = sorted(
-        glob.glob(os.path.join(config.DATA_DIR, "BraTS20_Training_*")) 
-    )
+    ## patient directory splitting (Targeting preprocessed .npz files in config.OUTPUT_DIR)
+    search_dir = config.OUTPUT_DIR
+    patient_dirs = sorted(glob.glob(os.path.join(search_dir, "BraTS20_Training_*")))
+    
+    # Fallback to search recursively if structure path alignment differs
+    if not patient_dirs:
+        patient_dirs = sorted(glob.glob("/kaggle/working/**/BraTS20_Training_*", recursive=True))
+
+    # Fallback to direct parent folder grouping if no top-level patient folders matched
+    if not patient_dirs:
+        all_npz = glob.glob(os.path.join(search_dir, "**/*.npz"), recursive=True) or glob.glob("/kaggle/working/**/*.npz", recursive=True)
+        if not all_npz:
+            raise FileNotFoundError(f"No .npz files found in {search_dir} or /kaggle/working/")
+        patient_dirs = sorted(list(set(os.path.dirname(p) for p in all_npz)))
+
+    print(f"[Data Setup] Discovered {len(patient_dirs)} patient folders for splitting.")
+
     train_data, val_data = train_test_split(patient_dirs, test_size=config.VAL_SPLIT, random_state=config.RANDOM_SEED)
     
     ## pass patient splits to collect .npz slice file paths: 
     train_slice_paths = get_slice_paths(train_data)
     val_slice_paths = get_slice_paths(val_data)
     
-    ## use the dataSet class to create the 2D datasets for train and validation using .npz file paths: 
+    print(f"[Data Setup] Train Slices: {len(train_slice_paths)} | Val Slices: {len(val_slice_paths)}")
+
+    ## use the dataset class to create the 2D datasets for train and validation using .npz file paths: 
     train_dataset = BraTS2DDataset(train_slice_paths)
     val_dataset = BraTS2DDataset(val_slice_paths)
     
@@ -136,7 +149,7 @@ if __name__ == "__main__":
         print(f"Epoch [{epoch+1}/{config.EPOCHS}] completed in {epoch_time:.2f} seconds.")
         peak_gpu_mb = torch.cuda.max_memory_allocated() / (1024 ** 2) # Memory in MB
         
-        ## loging the metrics to wandb : 
+        ## logging the metrics to wandb : 
         w.log(
             {
                 "epoch": epoch + 1,
