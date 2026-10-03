@@ -1,0 +1,2 @@
+Run ID,Model Name,Architecture,Task Type,Best Seg Dice (A),Best Cls Acc (B),Best Cls AUC,Final Loss
+8n1prhi7,solar-dragon-34,U-Net,MTL,0.7262906191242531,0.0,0.0,0.4613512879887043
