@@ -26,4 +26,8 @@ step 2 : verify if we have negative transfer
 if (A-mtl < A1) or (B-mtl < B1) then we have negative sampling => step 3 (fix negative sampling via PCgrad)
 if (A-mtl > A1) and(B-mtl > B1) then : synergy achieved 
 
+
+
+1. Define the 4 Baseline ExperimentsExperiment ModelArchitecture DescriptionPrimary TaskSecondary Task$B_1$: Random Encoder + ClassifierUNet Encoder (Scratch) + MLP HeadClassificationNone$B_2$: Pretrained Encoder + ClassifierPre-trained Seg Encoder + MLP HeadClassificationNone$B_3$: UNet AloneUNet Encoder + DecoderSegmentationNone$M_{\text{MTL}}$: Joint Multi-TaskShared UNet Encoder + Dual HeadsSegmentationClassification
+
  
