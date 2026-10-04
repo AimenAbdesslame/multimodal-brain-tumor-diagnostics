@@ -1,41 +1,73 @@
-from pathlib import Path
-import sys
-import torch
-import wandb
-import src.config as cfg
 import glob
-import random
 
+# ==========================================
+# 1. PATH RESOLUTION & IMPORTS
+# ==========================================
 from pathlib import Path
+import random
+import sys
+
+from sklearn.metrics import roc_auc_score
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import wandb
 
-from src.data.tumor_dataset import BraTS2DDataset
-from src.models.classification_head import UNetClassificationWrapper
-from src.models.unet_segmentation import UNet
-
-from sklearn.metrics import roc_auc_score 
-
-
-# 1. Dynamically append project root to_s python path
 FILE_DIR = Path(__file__).resolve().parent
 SRC_DIR = FILE_DIR.parent
 PROJECT_ROOT = SRC_DIR.parent
 
 if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-# 2. Central project imports
 import src.config as cfg
+from src.data.tumor_dataset import BraTS2DDataset
 from src.models.classification_head import UNetClassificationWrapper
 
-# 3. Reproducibility & Device configuration
+try:
+    from src.models.unet import UNet
+except ModuleNotFoundError:
+    from src.models.unet_segmentation import UNet
+
+# Reproducibility seeds
 torch.manual_seed(cfg.RANDOM_SEED)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(cfg.RANDOM_SEED)
 
-# 4. Initialize W&B Experiment Tracking
+
+# ==========================================
+# 2. EARLY STOPPING CLASS
+# ==========================================
+class EarlyStopping:
+    """Stops training if validation score doesn't improve after a given patience."""
+
+    def __init__(self, patience: int = 5, min_delta: float = 0.001):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+
+    def __call__(self, val_auc: float) -> bool:
+        if self.best_score is None:
+            self.best_score = val_auc
+        elif val_auc > self.best_score + self.min_delta:
+            self.best_score = val_auc
+            self.counter = 0  # Reset counter on improvement
+        else:
+            self.counter += 1
+            print(
+                f"   ⏳ EarlyStopping counter: {self.counter}/{self.patience}"
+            )
+            if self.counter >= self.patience:
+                self.early_stop = True
+
+        return self.early_stop
+
+
+# ==========================================
+# 3. W&B & DATASET INITIALIZATION
+# ==========================================
 wandb.init(
     project=cfg.WANDB_PROJECT,
     name=cfg.WANDB_CLS_RUN_NAME,
@@ -54,14 +86,11 @@ wandb.init(
 )
 
 print(
-    f" Block 1 Success: W&B initialized for '{cfg.WANDB_CLS_RUN_NAME}' on {cfg.DEVICE}"
+    f"✅ Block 1 Success: W&B initialized for '{cfg.WANDB_CLS_RUN_NAME}' on {cfg.DEVICE}"
 )
 
-
-# Find all patient preprocessed folders inside OUTPUT_DIR
+# Patient-Level Split (prevents slice leakage)
 patient_dirs = sorted([p for p in cfg.OUTPUT_DIR.iterdir() if p.is_dir()])
-
-# Deterministic Patient-Level Split (prevents slice leakage)
 random.seed(cfg.RANDOM_SEED)
 random.shuffle(patient_dirs)
 
@@ -69,7 +98,6 @@ val_count = max(1, int(len(patient_dirs) * cfg.VAL_SPLIT))
 train_patient_dirs = patient_dirs[val_count:]
 val_patient_dirs = patient_dirs[:val_count]
 
-# Collect all .npz slice paths for train and validation sets
 train_slice_paths = sorted(
     [str(p) for pdir in train_patient_dirs for p in pdir.glob("*.npz")]
 )
@@ -89,35 +117,30 @@ val_loader = DataLoader(
 
 
 # ==========================================
-# 2. MODEL WRAPPING & BOTTLENECK HOOK
+# 4. MODEL SETUP & OPTIMIZER
 # ==========================================
 base_unet = UNet(in_channels=cfg.IN_CHANNELS, out_channels=cfg.OUT_CHANNELS)
 
-
-# Dynamically locate bottleneck layer inside base U-Net
 bottleneck_layer = getattr(
     base_unet,
     "bottleneck",
     getattr(base_unet, "center", list(base_unet.children())[2]),
 )
 
-# Wrap base U-Net with MLP classification head hook
 model = UNetClassificationWrapper(
     unet_model=base_unet,
     bottleneck_layer=bottleneck_layer,
     in_channels=cfg.CLS_IN_CHANNELS,
 ).to(cfg.DEVICE)
-# Optional: Explicitly freeze decoder parameters
+
+# Explicitly freeze decoder parameters
 for name, param in model.unet.named_parameters():
-    if "up" in name or "outc" in name:  # Decoder layer naming conventions
+    if "up" in name or "outc" in name:
         param.requires_grad = False
 
-# ==========================================
-# 3. LOSS & OPTIMIZER SETUP (END-TO-END)
-# ==========================================
 criterion = nn.BCEWithLogitsLoss()
 
-# Pass model.parameters() to optimize BOTH Encoder and MLP Head together
+# Optimize Encoder + MLP Head together
 optimizer = torch.optim.Adam(
     model.parameters(),
     lr=cfg.CLS_LR,
@@ -129,17 +152,16 @@ trainable_params = sum(
 )
 
 print(
-    f" Block 2 Success: Split {len(patient_dirs)} patients into "
+    f"✅ Block 2 Success: Split {len(patient_dirs)} patients into "
     f"{len(train_patient_dirs)} train ({len(train_slice_paths)} slices) and "
     f"{len(val_patient_dirs)} val ({len(val_slice_paths)} slices)."
 )
-print(f" Block 3 Success: Model initialized with {trainable_params:,} trainable parameters.")
-print(f"End-to-End Training Enabled: Encoder + MLP Head training together.")
+print(f"🔥 End-to-End Training Enabled: Encoder + MLP Head training together.")
 print(f"   Total Trainable Parameters: {trainable_params:,}")
 
 
-
-# 1. EPOCH STEP FUNCTIONS
+# ==========================================
+# 5. EPOCH STEP FUNCTIONS
 # ==========================================
 def train_one_epoch(model, dataloader, criterion, optimizer, device):
     """Executes a single training epoch over Encoder + Classification Head."""
@@ -200,7 +222,6 @@ def validate_one_epoch(model, dataloader, criterion, device):
     epoch_loss = running_loss / total
     epoch_acc = correct / total
 
-    # Compute ROC-AUC safely
     try:
         epoch_auc = roc_auc_score(all_targets, all_probs)
     except ValueError:
@@ -210,13 +231,14 @@ def validate_one_epoch(model, dataloader, criterion, device):
 
 
 # ==========================================
-# 2. MAIN TRAINING LOOP & CHECKPOINTING
+# 6. MAIN TRAINING LOOP & CHECKPOINTING
 # ==========================================
 if __name__ == "__main__":
     best_val_auc = 0.0
+    early_stopper = EarlyStopping(patience=5, min_delta=0.001)
 
     print(
-        f"\n Starting End-to-End Classification Training ({cfg.WANDB_CLS_RUN_NAME}) for {cfg.CLS_EPOCHS} Epochs...\n"
+        f"\n🚀 Starting End-to-End Classification Training ({cfg.WANDB_CLS_RUN_NAME}) for up to {cfg.CLS_EPOCHS} Epochs...\n"
     )
 
     for epoch in range(1, cfg.CLS_EPOCHS + 1):
@@ -227,7 +249,6 @@ if __name__ == "__main__":
             model, val_loader, criterion, cfg.DEVICE
         )
 
-        # Log metrics to Weights & Biases
         wandb.log(
             {
                 "epoch": epoch,
@@ -245,7 +266,7 @@ if __name__ == "__main__":
             f"Val Loss: {val_loss:.4f} - Val Acc: {val_acc:.4f} - Val AUC: {val_auc:.4f}"
         )
 
-        # Save best model checkpoint (Saves both UNet Encoder and Head weights)
+        # 1. Save checkpoint on improvement
         if val_auc > best_val_auc:
             best_val_auc = val_auc
             torch.save(
@@ -259,8 +280,15 @@ if __name__ == "__main__":
                 cfg.CLS_CHECKPOINT_PATH,
             )
             print(
-                f"   💾 Checkpoint saved -> Best Val AUC: {best_val_auc:.4f} ({cfg.CLS_CHECKPOINT_PATH.name})"
+                f"    Checkpoint saved -> Best Val AUC: {best_val_auc:.4f} ({cfg.CLS_CHECKPOINT_PATH.name})"
             )
+
+        # 2. Early stopping evaluation
+        if early_stopper(val_auc):
+            print(
+                f"\n Early stopping triggered at Epoch {epoch}! Validation ROC-AUC plateaued."
+            )
+            break
 
     # Detach hook and close W&B logging
     model.remove_hook()
@@ -269,7 +297,3 @@ if __name__ == "__main__":
     print(
         f"\n Classification Baseline B1 Complete! Best Validation ROC-AUC: {best_val_auc:.4f}"
     )
-
-
-
-

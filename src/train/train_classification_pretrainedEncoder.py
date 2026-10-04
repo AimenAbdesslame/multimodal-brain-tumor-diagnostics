@@ -17,12 +17,16 @@ SRC_DIR = FILE_DIR.parent
 PROJECT_ROOT = SRC_DIR.parent
 
 if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import src.config as cfg
 from src.data.tumor_dataset import BraTS2DDataset
 from src.models.classification_head import UNetClassificationWrapper
-from src.models.unet import UNet
+
+try:
+    from src.models.unet import UNet
+except ModuleNotFoundError:
+    from src.models.unet_segmentation import UNet
 
 # Set reproducibility seeds
 torch.manual_seed(cfg.RANDOM_SEED)
@@ -31,7 +35,37 @@ if torch.cuda.is_available():
 
 
 # ==========================================
-# 2. CHECKPOINT SEARCH & LOADING LOGIC
+# 2. EARLY STOPPING CLASS
+# ==========================================
+class EarlyStopping:
+    """Stops training if validation score doesn't improve after a given patience."""
+
+    def __init__(self, patience: int = 5, min_delta: float = 0.001):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+
+    def __call__(self, val_auc: float) -> bool:
+        if self.best_score is None:
+            self.best_score = val_auc
+        elif val_auc > self.best_score + self.min_delta:
+            self.best_score = val_auc
+            self.counter = 0  # Reset counter on meaningful gain
+        else:
+            self.counter += 1
+            print(
+                f"    EarlyStopping counter: {self.counter}/{self.patience}"
+            )
+            if self.counter >= self.patience:
+                self.early_stop = True
+
+        return self.early_stop
+
+
+# ==========================================
+# 3. CHECKPOINT SEARCH & LOADING LOGIC
 # ==========================================
 def find_checkpoint(project_root: Path) -> Path:
     """Find the trained segmentation checkpoint in common project locations."""
@@ -89,7 +123,7 @@ def load_state_dict(checkpoint_path: Path, device: torch.device):
 
 
 # ==========================================
-# 3. W&B & DATA INITIALIZATION
+# 4. W&B & DATA INITIALIZATION
 # ==========================================
 wandb.init(
     project=cfg.WANDB_PROJECT,
@@ -133,7 +167,7 @@ val_loader = DataLoader(val_ds, batch_size=cfg.CLS_BATCH_SIZE, shuffle=False)
 
 
 # ==========================================
-# 4. INSTANTIATE & LOAD PRE-TRAINED ENCODER
+# 5. INSTANTIATE & LOAD PRE-TRAINED ENCODER
 # ==========================================
 base_unet = UNet(
     in_channels=cfg.IN_CHANNELS, out_channels=cfg.OUT_CHANNELS
@@ -170,7 +204,7 @@ optimizer = torch.optim.Adam(
 
 
 # ==========================================
-# 5. EPOCH FUNCTIONS & MAIN LOOP
+# 6. EPOCH FUNCTIONS & MAIN LOOP
 # ==========================================
 def train_one_epoch(model, dataloader, criterion, optimizer):
     model.train()
@@ -220,9 +254,10 @@ if __name__ == "__main__":
     checkpoint_out_path = (
         cfg.CHECKPOINT_DIR / "best_model_cls_pretrained_encoder.pth"
     )
+    early_stopper = EarlyStopping(patience=5, min_delta=0.001)
 
     print(
-        f"\n🚀 Training Classification with Pre-trained Encoder ({cfg.CLS_EPOCHS} epochs)..."
+        f"\n Training Classification with Pre-trained Encoder (up to {cfg.CLS_EPOCHS} epochs)..."
     )
 
     for epoch in range(1, cfg.CLS_EPOCHS + 1):
@@ -248,6 +283,7 @@ if __name__ == "__main__":
             f"Val Loss: {v_loss:.4f} Acc: {v_acc:.4f} AUC: {v_auc:.4f}"
         )
 
+        # 1. Save checkpoint on improvement
         if v_auc > best_val_auc:
             best_val_auc = v_auc
             torch.save(
@@ -263,6 +299,13 @@ if __name__ == "__main__":
             print(
                 f"    Saved Checkpoint -> Best Val AUC: {best_val_auc:.4f} ({checkpoint_out_path.name})"
             )
+
+        # 2. Check Early Stopping
+        if early_stopper(v_auc):
+            print(
+                f"\n Early stopping triggered at Epoch {epoch}! Validation ROC-AUC plateaued."
+            )
+            break
 
     model.remove_hook()
     wandb.finish()
