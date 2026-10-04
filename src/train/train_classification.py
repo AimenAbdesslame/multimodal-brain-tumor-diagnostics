@@ -5,6 +5,7 @@ import wandb
 import src.config as cfg
 import glob
 import random
+
 from pathlib import Path
 import torch
 import torch.nn as nn
@@ -12,12 +13,12 @@ from torch.utils.data import DataLoader
 
 from src.data.tumor_dataset import BraTS2DDataset
 from src.models.classification_head import UNetClassificationWrapper
-from src.models.unet import UNet
+from src.models.unet_segmentation import UNet
 
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score 
 
 
-# 1. Dynamically append project root to python path
+# 1. Dynamically append project root to_s python path
 FILE_DIR = Path(__file__).resolve().parent
 SRC_DIR = FILE_DIR.parent
 PROJECT_ROOT = SRC_DIR.parent
