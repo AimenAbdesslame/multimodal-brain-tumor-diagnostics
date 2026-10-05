@@ -65,9 +65,11 @@ class MultiTaskLoss(nn.Module):
             "segmentation": 1.0,
             "classification": 1.0,
         }
+        self.alpha = alpha
+        self.gamma = gamma
 
         # Initialize loss functions ONCE here
-        self.seg_loss_fn = SegmentationLoss(alpha=alpha, gamma=gamma)
+        self.seg_loss_fn = SegmentationLoss(alpha=self.alpha, gamma=self.gamma)
         self.cls_loss_fn = nn.BCEWithLogitsLoss()
 
         if self.uncertainty_weighting:
