@@ -57,7 +57,7 @@ class EarlyStopping:
         else:
             self.counter += 1
             print(
-                f"   ⏳ EarlyStopping counter: {self.counter}/{self.patience}"
+                f"    EarlyStopping counter: {self.counter}/{self.patience}"
             )
             if self.counter >= self.patience:
                 self.early_stop = True
@@ -86,7 +86,7 @@ wandb.init(
 )
 
 print(
-    f"✅ Block 1 Success: W&B initialized for '{cfg.WANDB_CLS_RUN_NAME}' on {cfg.DEVICE}"
+    f" Block 1 Success: W&B initialized for '{cfg.WANDB_CLS_RUN_NAME}' on {cfg.DEVICE}"
 )
 
 # Patient-Level Split (prevents slice leakage)
@@ -152,7 +152,7 @@ trainable_params = sum(
 )
 
 print(
-    f"✅ Block 2 Success: Split {len(patient_dirs)} patients into "
+    f" Block 2 Success: Split {len(patient_dirs)} patients into "
     f"{len(train_patient_dirs)} train ({len(train_slice_paths)} slices) and "
     f"{len(val_patient_dirs)} val ({len(val_slice_paths)} slices)."
 )

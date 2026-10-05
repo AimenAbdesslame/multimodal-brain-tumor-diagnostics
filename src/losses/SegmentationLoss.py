@@ -11,7 +11,7 @@ class DiceLoss(nn.Module):
         # Step 1: Turn raw model predictions into probabilities (0.0 to 1.0)
         probs = torch.sigmoid(logits)
         
-        # Step 2: Flatten 2D images into 1D vectors for easy calculation
+        # Step 2: FlatD vectors for easy calculation
         probs = probs.view(probs.size(0), -1)
         targets = targets.view(targets.size(0), -1)
         
