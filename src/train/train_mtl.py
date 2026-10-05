@@ -31,7 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
 import src.config as cfg
 from src.data.tumor_dataset import BraTS2DDataset
 from src.losses.multitask_loss import MultiTaskLoss
-from src.models.mtl_model import UNetMultiTaskModel
+from src.models.mtl_model import UNetClassificationWrapper as UNetMultiTaskModel
 from src.models.unet_segmentation import UNet
 
 # Set seeds for reproducibility
