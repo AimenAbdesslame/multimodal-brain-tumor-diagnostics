@@ -283,7 +283,7 @@ if __name__ == "__main__":
             if masks.ndim == 3:
                 masks = masks.unsqueeze(1)
 
-            # Forward Pass
+            # 1. Forward Pass
             seg_logits, cls_logits = model(images)
             total_loss, seg_loss, cls_loss = loss_fn(
                 seg_logits, masks, cls_logits, targets
@@ -301,7 +301,7 @@ if __name__ == "__main__":
                 w_seg_loss = seg_loss
                 w_cls_loss = cls_loss
 
-            # --- PCGRAD STEP 1: Compute Task 1 (Segmentation) Gradients ---
+            # --- PCGRAD STEP 1: Segmentation Gradients ---
             optimizer.zero_grad()
             w_seg_loss.backward(retain_graph=True)
 
@@ -313,9 +313,17 @@ if __name__ == "__main__":
                     grad_seg.append(torch.zeros(p.numel(), device=cfg.DEVICE))
             flat_grad_seg = torch.cat(grad_seg)
 
-            # --- PCGRAD STEP 2: Compute Task 2 (Classification) Gradients ---
+            # Save loss_fn gradients for seg
+            log_vars_grad_seg = (
+                loss_fn.log_vars.grad.clone()
+                if hasattr(loss_fn, "log_vars")
+                and loss_fn.log_vars.grad is not None
+                else None
+            )
+
+            # --- PCGRAD STEP 2: Classification Gradients ---
             optimizer.zero_grad()
-            w_cls_loss.backward()
+            w_cls_loss.backward()  # Frees intermediate memory cleanly
 
             grad_cls = []
             for p in model.parameters():
@@ -324,6 +332,14 @@ if __name__ == "__main__":
                 else:
                     grad_cls.append(torch.zeros(p.numel(), device=cfg.DEVICE))
             flat_grad_cls = torch.cat(grad_cls)
+
+            # Save loss_fn gradients for cls
+            log_vars_grad_cls = (
+                loss_fn.log_vars.grad.clone()
+                if hasattr(loss_fn, "log_vars")
+                and loss_fn.log_vars.grad is not None
+                else None
+            )
 
             # --- PCGRAD STEP 3: Detect Conflict & Apply Projection ---
             final_grad, has_conflict, cos_sim = project_conflicting_gradients(
@@ -338,10 +354,7 @@ if __name__ == "__main__":
             # --- PCGRAD STEP 4: Inject Projected Gradients & Optimize ---
             optimizer.zero_grad()
 
-            # Apply loss_fn parameters gradient via standard backward
-            total_loss.backward(retain_graph=True)
-
-            # Overwrite model parameters with projected gradients
+            # Apply projected gradients to model parameters
             idx = 0
             for p in model.parameters():
                 numel = p.numel()
@@ -352,6 +365,10 @@ if __name__ == "__main__":
                     .to(p.device)
                 )
                 idx += numel
+
+            # Restore loss_fn uncertainty weights gradients
+            if hasattr(loss_fn, "log_vars") and log_vars_grad_seg is not None:
+                loss_fn.log_vars.grad = log_vars_grad_seg + log_vars_grad_cls
 
             optimizer.step()
 
