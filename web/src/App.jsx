@@ -20,6 +20,11 @@ const NAV_ITEMS = [
   { path: '/pcgrad', label: 'PCGrad MTL', icon: Zap, badge: 'NEW', badgeClass: 'green' },
   { path: '/benchmark', label: 'Benchmark Suite', icon: Trophy, badge: 'LIVE', badgeClass: 'green' },
 ]
+const apiBase =
+  import.meta.env.VITE_API_URL ?
+    `${import.meta.env.VITE_API_URL}/api` :
+    '/api'
+fetch(`${apiBase}/metrics`)
 
 function Sidebar({ backendStatus }) {
   const location = useLocation()

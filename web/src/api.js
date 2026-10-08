@@ -3,7 +3,8 @@
  * Falls back to demo data when backend is offline.
  */
 
-const BASE = '/api'
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+
 
 async function post(path, formData) {
   const res = await fetch(`${BASE}${path}`, { method: 'POST', body: formData })
@@ -76,11 +77,11 @@ export function demoMtlResult() {
 
 export function demoAllResults() {
   return [
-    { model: 'unet',         type: 'Segmentation',  dice: 0.721, tumor_prob: null,  confidence: null,  confidence_pct: null },
-    { model: 'baseline_cls', type: 'Classification', dice: null,  tumor_prob: 0.942, confidence: 94.2,  confidence_pct: 94.2 },
-    { model: 'transfer_cls', type: 'Classification', dice: null,  tumor_prob: 0.991, confidence: 99.1,  confidence_pct: 99.1 },
-    { model: 'standard_mtl', type: 'Multi-Task',     dice: 0.701, tumor_prob: 0.952, confidence: 95.2,  confidence_pct: 95.2 },
-    { model: 'pcgrad_mtl',   type: 'Multi-Task',     dice: 0.732, tumor_prob: 0.988, confidence: 98.8,  confidence_pct: 98.8 },
+    { model: 'unet', type: 'Segmentation', dice: 0.721, tumor_prob: null, confidence: null, confidence_pct: null },
+    { model: 'baseline_cls', type: 'Classification', dice: null, tumor_prob: 0.942, confidence: 94.2, confidence_pct: 94.2 },
+    { model: 'transfer_cls', type: 'Classification', dice: null, tumor_prob: 0.991, confidence: 99.1, confidence_pct: 99.1 },
+    { model: 'standard_mtl', type: 'Multi-Task', dice: 0.701, tumor_prob: 0.952, confidence: 95.2, confidence_pct: 95.2 },
+    { model: 'pcgrad_mtl', type: 'Multi-Task', dice: 0.732, tumor_prob: 0.988, confidence: 98.8, confidence_pct: 98.8 },
   ]
 }
 
