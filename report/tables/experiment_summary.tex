@@ -1,9 +1,11 @@
-\begin{tabular}{llllrrrr}
+\begin{tabular}{llllrrrrrl}
 \toprule
-Run ID & Model Name & Architecture & Task Type & Best Seg Dice (A) & Best Cls Acc (B) & Best Cls AUC & Final Loss \\
+Run ID & Model Name & Architecture & Task Type & Best Seg Dice (A) & Best Cls Acc (B) & Best Cls AUC & Final Loss & Runtime (s) & Runtime (Formatted) \\
 \midrule
-8n1prhi7 & U-net_segmentation & U-Net & MTL & 0.7263 & 0.0000 & 0.0000 & 0.4614 \\
-mlqd0v9k & Cls_Single_Baseline & UNet_Bottleneck_MLP & Classification_Single & 0.0000 & 0.8880 & 0.9621 & 0.3869 \\
-dikk7i3k & Cls_PretrainedEncoder_Baseline & UNet_Pretrained_Bottleneck_MLP & Classification_PretrainedEncoder & 0.0000 & 0.9015 & 0.9625 & 0.3530 \\
+8n1prhi7 & U-net_segmentation & U-Net & MTL & 0.7263 & 0.0000 & 0.0000 & 0.4614 & 3878.2946 & 1h 4m 38s \\
+mlqd0v9k & Cls_Single_Baseline & UNet_Bottleneck_MLP & Classification_Single & 0.0000 & 0.8880 & 0.9621 & 0.3869 & 11426.0000 & 3h 10m 26s \\
+dikk7i3k & Cls_PretrainedEncoder_Baseline & UNet_Pretrained_Bottleneck_MLP & Classification_PretrainedEncoder & 0.0000 & 0.9015 & 0.9625 & 0.3530 & 11429.0000 & 3h 10m 29s \\
+an2nlato & Mtl & U-Net & MTL & 0.7181 & 0.0000 & 0.9561 & -0.0655 & 10397.0000 & 2h 53m 17s \\
+flo90mcf & pcgradMtl & U-Net & MTL_PCGrad & 0.6923 & 0.0000 & 0.9587 & -0.0239 & 20194.0000 & 5h 36m 34s \\
 \bottomrule
 \end{tabular}

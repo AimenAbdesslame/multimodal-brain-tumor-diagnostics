@@ -1,4 +1,6 @@
-Run ID,Model Name,Architecture,Task Type,Best Seg Dice (A),Best Cls Acc (B),Best Cls AUC,Final Loss
-8n1prhi7,U-net_segmentation,U-Net,MTL,0.7262906191242531,0.0,0.0,0.4613512879887043
-mlqd0v9k,Cls_Single_Baseline,UNet_Bottleneck_MLP,Classification_Single,0.0,0.8880088414072573,0.962059614107672,0.3868517407057301
-dikk7i3k,Cls_PretrainedEncoder_Baseline,UNet_Pretrained_Bottleneck_MLP,Classification_PretrainedEncoder,0.0,0.9014551482777676,0.962494892225968,0.3530348754106891
+Run ID,Model Name,Architecture,Task Type,Best Seg Dice (A),Best Cls Acc (B),Best Cls AUC,Final Loss,Runtime (s),Runtime (Formatted)
+8n1prhi7,U-net_segmentation,U-Net,MTL,0.7262906191242531,0.0,0.0,0.4613512879887043,3878.294637429,1h 4m 38s
+mlqd0v9k,Cls_Single_Baseline,UNet_Bottleneck_MLP,Classification_Single,0.0,0.8880088414072573,0.962059614107672,0.3868517407057301,11426.0,3h 10m 26s
+dikk7i3k,Cls_PretrainedEncoder_Baseline,UNet_Pretrained_Bottleneck_MLP,Classification_PretrainedEncoder,0.0,0.9014551482777676,0.962494892225968,0.3530348754106891,11429.0,3h 10m 29s
+an2nlato,Mtl,U-Net,MTL,0.7180827856063843,0.0,0.956081728794062,-0.06549996449291341,10397.0,2h 53m 17s
+flo90mcf,pcgradMtl,U-Net,MTL_PCGrad,0.6922523379325867,0.0,0.9587288837124166,-0.023868777500005392,20194.0,5h 36m 34s
