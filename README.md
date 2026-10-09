@@ -80,3 +80,9 @@ npm run dev
 ```
 
 Open browser at **`http://localhost:5173`**.
+
+
+## Live Demo
+
+see : 
+[https://multimodal-brain-tumor-diagnostics.vercel.app](https://multimodal-brain-tumor-diagnostics.vercel.app)
