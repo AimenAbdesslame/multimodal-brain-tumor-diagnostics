@@ -37,7 +37,7 @@ function Sidebar({ backendStatus }) {
             <Radio size={18} color="#fff" />
           </div>
           <div className="logo-text">
-            <span className="name">NeuroScan AI</span>
+            <span className="name">MRI</span>
             <span className="tagline">Brain Tumor Diagnostics</span>
           </div>
         </NavLink>
